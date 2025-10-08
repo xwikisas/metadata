@@ -1,0 +1,406 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.6" reference="MetadataPro.Code.MetadataDisplay" locale="">
+  <web>MetadataPro.Code</web>
+  <name>MetadataDisplay</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>MetadataPro.Code.WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>MetadataDisplay</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content>{{groovy}}
+  import com.xpn.xwiki.api.PropertyClass;
+  import org.apache.commons.lang3.StringUtils;
+
+  def displayMetadataPro(boolean quiet, boolean box)
+  {
+    // Converted from templates/macros.vm
+    def unwrapXPropertyDisplay = { d -&gt;
+      return StringUtils.removeEnd(StringUtils.removeStart(d, '{{html clean="false" wiki="false"}}'), '{{/html}}')
+    };
+
+    def res = services.query.hql(
+      "select distinct doc.fullName, doc.title " +
+      "from " +
+      "  XWikiDocument doc, " +
+      "  BaseObject metadataSetObj, " +
+      "  DBStringListProperty includedSpacesProperty " +
+      "join " +
+      "  includedSpacesProperty.list includedSpace " +
+      "where " +
+      "      doc.fullName &lt;&gt; 'MetadataPro.Code.MetadataSetTemplate' " +
+      "  and doc.fullName = metadataSetObj.name " +
+      "  and metadataSetObj.className = 'MetadataPro.Code.MetadataSetClass' " +
+      "  and includedSpacesProperty.id.id = metadataSetObj.id " +
+      "  and includedSpacesProperty.id.name = 'includedSpaces' " +
+      "  and :currentLocation like concat(includedSpace, '.%')"
+    ).bindValue('currentLocation', doc.fullName).execute();
+
+    // Handle empty includedSpaces properties (which mean everywhere)
+    // I didn't know how to do this in one query, but it would be better
+    res.addAll(services.query.hql(
+      "select distinct doc.fullName, doc.title " +
+      "from " +
+      "  XWikiDocument doc, " +
+      "  BaseObject metadataSetObj, " +
+      "  DBStringListProperty includedSpacesProperty " +
+      "where " +
+      "      doc.fullName &lt;&gt; 'MetadataPro.Code.MetadataSetTemplate' " +
+      "  and doc.fullName = metadataSetObj.name " +
+      "  and metadataSetObj.className = 'MetadataPro.Code.MetadataSetClass' " +
+      "  and includedSpacesProperty.id.id = metadataSetObj.id " +
+      "  and includedSpacesProperty.id.name = 'includedSpaces' " +
+      "  and includedSpacesProperty.list is empty"
+    ).execute());
+
+    def boxStarted = false;
+    if (res.isEmpty()) {
+      if (!quiet) {
+        println services.localization.render("metadatapro.nosetsforthislocation");
+      }
+    } else {
+      def objectsToRender = [];
+      def found = false;
+      for (String[] r : res) {
+        def (metadataSetFullName, metadataSetTitle) = r;
+        if (metadataSetTitle.trim() == "") {
+          metadataSetTitle = metadataSetFullName;
+        }
+        if (doc.getObject(metadataSetFullName) == null) {
+          if (!found) {
+            found = true;
+            if (hasEdit &amp;&amp; !quiet) {
+              println services.localization.render("metadatapro.youcanaddaset");
+              println ""
+              println "{{html clean=false}}";
+              println "&lt;form method='post' action='" + doc.getURL("edit", "sheet=MetadataPro.Code.MetadataSetInstanceSheet") + "'&gt;"
+              println "&lt;p style='display:flex;gap: 1ex; align-items: center'&gt;"
+              println "&lt;label style='margin:0'&gt;" + services.localization.render("metadatapro.metadatasetlabel") + " &lt;select name='metadataset'&gt;"
+            }
+          }
+          if (hasEdit &amp;&amp; !quiet) {
+            println (
+              "&lt;option value='" +
+              services.xml.escape(metadataSetFullName) +
+              "'&gt;" +
+              services.xml.escape(metadataSetTitle) +
+              "&lt;/option&gt;"
+            );
+          }
+        } else {
+          objectsToRender.add(r);
+        }
+      }
+      if (!quiet) {
+        if (found) {
+          println (
+            "&lt;/select&gt;&lt;/label&gt; " + 
+            "&lt;button name='editmetadataset' value='1' class='btn btn-primary'&gt;" +
+              services.localization.render("metadatapro.actions.add") +
+            "&lt;/button&gt;&lt;/p&gt;&lt;/form&gt;"
+          );
+          println "{{/html}}";
+        } else {
+          println services.localization.render("metadatapro.nomoresetsforthislocation");
+        }
+      }
+
+      if (!objectsToRender.isEmpty()) {
+        // println '{{html clean=false}}&lt;form method="post" action="' + doc.getURL('preview') + '"&gt;{{/html}}'
+        if (box) {
+          println "{{html clean=false}}&lt;section class='metadatapro-display'&gt;&lt;h2&gt;" + services.localization.render('metadatapro.box.title') + "&lt;/h2&gt;{{/html}}";
+          boxStarted = true;
+        }
+        if (!quiet) {
+          println "\n----\n"
+        }
+        for (String[] r : objectsToRender) {
+          def (metadataSetFullName, metadataSetTitle) = r;
+          if (metadataSetTitle.trim() == "") {
+            metadataSetTitle = metadataSetFullName;
+          }
+          def escapedSetFullName = services.xml.escape(metadataSetFullName);
+          def heading = "=== " + services.rendering.escape(metadataSetTitle, doc.getSyntax());
+          if (hasEdit) {
+            def xredirect =  java.net.URLEncoder.encode(
+              request.requestURI
+                + (request.queryString ? ("?" + request.queryString) : ""),
+              "UTF-8");
+            println (
+               "\n{{html clean=false}}"
+               + "&lt;div class='metadatapro-set'&gt;"
+               + "&lt;form id='metadatapro-form-"
+               + escapedSetFullName
+               + "' method='post' action='"
+               + doc.getURL("edit", "sheet=MetadataPro.Code.MetadataSetInstanceSheet&amp;xredirect=" + xredirect)
+               + "'&gt;&lt;input type='hidden' name='metadataset' value='"
+               + escapedSetFullName
+               + "' /&gt;&lt;/form&gt;"
+               + "{{/html}}\n\n"
+               + heading
+               + " {{html}}"
+               + "&lt;span class='metadatapro-set-actions'&gt;"
+               + "&lt;button name='editmetadataset' value='1' form='metadatapro-form-" + escapedSetFullName + "' class='btn-metadatapro-linklike btn btn-metadatapro-edit' aria-label='" + services.localization.render('metadatapro.actions.edit') + "'&gt;"
+               + '&lt;span class="fa fa-pencil" aria-hidden="true"&gt;&lt;/span&gt;'
+               + "&lt;/button&gt; "
+               + "&lt;button name='deletemetadataset' value='1' form='metadatapro-form-" + escapedSetFullName + "' class='btn-metadatapro-linklike btn-metadatapro-delete' aria-label='" + services.localization.render('metadatapro.actions.delete') + "'&gt;"
+               + '&lt;span class="fa fa-times" aria-hidden="true"&gt;&lt;/span&gt;'
+               + "&lt;/button&gt;"
+               + "&lt;/span&gt;"
+               + "{{/html}}\n\n"
+            );
+          } else {
+            println heading;
+          }
+          def obj = doc.getObject(metadataSetFullName);
+          if (obj) {
+              for (PropertyClass property : obj.xWikiClass.properties) {
+                def v = unwrapXPropertyDisplay(doc.display(property.getName())).trim();
+                if (v) {
+                  // display is supposed to issue an html macro but doesn't, and will when it gets fixed,
+                  // so we prepare for both situations by wrapping with html manually and removing the potential html macro returned by display using unwrapXPropertyDisplay
+                  println "|= " + property.prettyName + " | (((\n\n{{html}}\n" + v + "\n{{/html}}\n\n)))";
+                }
+              }
+              println "\n{{html clean=false}}\n&lt;/div&gt;\n{{/html}}"
+          }
+        }
+        if (boxStarted) {
+          println "\n{{html clean=false}}\n&lt;/section&gt;\n{{/html}}";
+        }
+        /*println (
+          '\n\n{{html clean=false}}'
+          + '&lt;div class="btn-group"&gt;'
+          + '&lt;input class="btn btn-primary" type="submit" name="action_save" value="' + services.localization.render('saveandview') + '"&gt;'
+          + '&lt;/div&gt;'
+          + '&lt;input type="hidden" name="xaction" value="save"/&gt;'
+          + '&lt;/form&gt;'
+          + '{{/html}}'
+        );*/
+      }
+    }
+  }
+{{/groovy}}
+</content>
+  <object>
+    <name>MetadataPro.Code.MetadataDisplay</name>
+    <number>0</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>09eab4f7-b5c6-452e-b73a-d3f207f1f296</guid>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>6</number>
+        <prettyName>Content Type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>CSS|LESS</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>.metadatapro-display {
+  border:1px solid;
+  border-radius:var(--border-radius-base);
+  background:var(--panel-bg);
+  color:var(--panel-default-text);
+  h2 {
+    border-top-left-radius:var(--border-radius-base);
+    border-top-right-radius:var(--border-radius-base);
+    margin-top:0;
+    padding-top:0;
+    text-align:right;
+    font-size:1em;
+    background:var(--panel-header-bg);
+    color:var(--panel-header-text);
+    font-weight:bold;
+    padding:1ex
+  }
+  &gt; .metadatapro-set {
+    margin-bottom:0
+  }
+}
+.metadatapro-set {
+  padding:0 .5ex;
+  margin-bottom:2em;
+  &gt; h3 {
+    padding-left:3px;
+    margin:0
+  }
+  &gt; table {
+    margin:1ex 1ex 1ex 2ex;
+    width:calc(100% - 3ex);
+    &gt; tbody &gt; tr {
+      &amp;:nth-child(even) {
+        background:rgba(0,0,0,0.05)
+      }
+      &gt; td, &gt; th {
+        input {
+          width: 100%;
+        }
+        border:0;
+        padding:.5ex;
+        p:first-child {
+          padding-top:0;
+          margin-top:0
+        }
+        p:last-child {
+          padding-bottom:0;
+          margin-bottom:0
+        }
+      }
+    }
+  }
+}
+.metadatapro-set-actions {
+  display:inline-flex;
+  float:right;
+  gap:.5ex
+}
+.btn-metadatapro-linklike {
+  background:transparent;
+  padding:0 .25ex;
+  color:var(--link-color);
+  border:0;
+}
+
+.btn-metadatapro-linklike-danger {
+  color: var(--brand-danger);
+}
+
+.btn-metadatapro-delete {
+  color:var(--brand-danger)
+}
+</code>
+    </property>
+    <property>
+      <contentType>CSS</contentType>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
+</xwikidoc>

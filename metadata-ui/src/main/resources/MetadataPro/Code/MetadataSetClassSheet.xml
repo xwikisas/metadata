@@ -1,0 +1,1187 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.6" reference="MetadataPro.Code.MetadataSetClassSheet" locale="">
+  <web>MetadataPro.Code</web>
+  <name>MetadataSetClassSheet</name>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>MetadataPro.Code.WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content>{{groovy}}
+  import com.xpn.xwiki.api.Class;
+  import com.xpn.xwiki.api.Document;
+  import com.xpn.xwiki.objects.PropertyInterface;
+  import com.xpn.xwiki.objects.classes.BaseClass;
+  import com.xpn.xwiki.objects.classes.NumberClass;
+  import com.xpn.xwiki.objects.classes.PropertyClass;
+  import org.xwiki.velocity.tools.JSONTool;
+
+  import org.apache.commons.io.IOUtils;
+
+  import groovy.transform.Field
+
+  @Field final JSONTool jsontool = new JSONTool();
+  @Field final String l10nUpdateMetadataClass = services.localization.render('metadatapro.updatemetadataclasssavemessage');
+
+  boolean isTypeMismatch(String type, PropertyInterface property)
+  {
+    String[] typeArray = type.split("/");
+    String rawType = typeArray[0];
+    if (!property.getClass().getName().equals(rawType)) {
+      // we check that the requested class is the same as the property class
+      return true;
+    }
+
+    if (property instanceof NumberClass) {
+      NumberClass numberProp = (NumberClass) property;
+      // if this is a number property, we also check the number type
+      return typeArray.length != 2 || !numberProp.getNumberType().equals(typeArray[1]);
+    }
+
+    return true;
+  }
+
+  private boolean addStaticListField(BaseClass baseClass, String fieldName, String prettyName,
+      List&lt;String&gt; values, List&lt;String&gt; defaultValues, String displayType, boolean multiSelect)
+  {
+      String sep = findSep(values);
+      String vals = values == null ? "" : String.join(sep, values);
+      String firstDefVal = (defaultValues == null || defaultValues.isEmpty()) ? null : defaultValues.get(0);
+      return baseClass.addStaticListField(fieldName, prettyName, displayType == "select" ? 1 : 20, multiSelect, false, vals,
+          displayType, sep, firstDefVal);
+  }
+
+  /**
+   * @return a separator that's not used in any value (best-effort)
+   * @param values the values to consider
+   */
+  private String findSep(List&lt;String&gt; values)
+  {
+      return findSep(values, "|;,/^:&amp;+ ", 0);
+  }
+
+  private String findSep(List&lt;String&gt; values, String candidateSeparators, int i)
+  {
+      if (i &gt;= candidateSeparators.length()) {
+          // none of the candidate separators could be found, we'll just find whichever string of '+'s suffices
+          return findSepPlus(values, "++");
+      }
+
+      char candidateSeparator = candidateSeparators.charAt(i);
+
+      for (String v : values) {
+          if (v !== null &amp;&amp; !v.isEmpty()) {
+              if (v.indexOf((int) candidateSeparator) != -1) {
+                  return findSep(values, candidateSeparators, ++i);
+              }
+          }
+      }
+
+      return String.valueOf(candidateSeparator);
+  }
+
+  private String findSepPlus(List&lt;String&gt; values, String candidateSeparator)
+  {
+      for (String v : values) {
+          if (v != null &amp;&amp; !v.isEmpty()) {
+              if (v.contains(candidateSeparator)) {
+                  return findSepPlus(values, candidateSeparator + '+');
+              }
+          }
+      }
+
+      return candidateSeparator;
+  }
+
+  void createField(BaseClass baseClass, String technicalName, String prettyName, String type, List&lt;String&gt; values, List&lt;String&gt; defaultValues)
+  {
+    switch (type) {
+      case "StringClass":
+        baseClass.addTextField(technicalName, prettyName, 255);
+        return;
+      case "NumberClass/long":
+        baseClass.addNumberField(technicalName, prettyName, 30, "long");
+        return;
+      case "NumberClass/double":
+        baseClass.addNumberField(technicalName, prettyName, 30, "double");
+        return;
+      case "TextAreaClass":
+        baseClass.addTextAreaField(technicalName, prettyName, 80, 10);
+        return;
+      case "BooleanClass":
+        baseClass.addBooleanField(technicalName, prettyName);
+        return;
+      case "DateClass":
+        baseClass.addDateField(technicalName, prettyName, null, 0);
+        return;
+      case "EmailClass":
+        baseClass.addEmailField(technicalName, prettyName, 255);
+        return;
+      case "StaticListClass/select":
+        addStaticListField(baseClass, technicalName, prettyName, values, defaultValues, "select", false);
+        return;
+      case "StaticListClass/checkbox":
+        addStaticListField(baseClass, technicalName, prettyName, values, defaultValues, "checkbox", true);
+        return;
+      case "StaticListClass/radio":
+        addStaticListField(baseClass, technicalName, prettyName, values, defaultValues, "radio", false);
+        return;
+    }
+  }
+
+  def updateFields()
+  {
+    Class c = doc.getxWikiClass();
+
+    BaseClass baseClass = c.getXWikiClass();
+    Collection&lt;PropertyInterface&gt; fieldList = new ArrayList&lt;&gt;(baseClass.getFieldList());
+    Map&lt;String, PropertyInterface&gt; originalFields = new HashMap&lt;&gt;(fieldList.size());
+    int i = 0;
+
+    for (PropertyInterface field : fieldList) {
+      // we get the fields by name and remove them from the base class
+      String name = field.getName();
+      originalFields.put(name, field);
+      baseClass.removeField(name);
+    }
+
+    List&lt;String&gt; requiredFields = new ArrayList&lt;String&gt;();
+
+    Map&lt;String, Object&gt; defaultValues = new HashMap&lt;String, Object&gt;();
+
+    for (Map&lt;String, String&gt; field : jsontool.parse(IOUtils.toString(request.getReader()))) {
+      // We add each field, in the requested order
+      i++;
+      String technicalName = field.get("technicalName");
+      if (technicalName == null || technicalName.isEmpty()) {
+        // there's a client side verification to avoid empty properties name.
+        // Still, an empty name would severely break the document beyond repair
+        // so we guard against this here too.
+        continue;
+      }
+      String prettyName = field.get("prettyName");
+      String type = field.get("type");
+      boolean required = field.get("required");
+      if (required) {
+        requiredFields.add(technicalName);
+      }
+      PropertyInterface property = originalFields.get(technicalName);
+
+      List&lt;String&gt; dv = field.get("defaultValues");
+      if (dv != null &amp;&amp; !dv.isEmpty()) {
+        defaultValues.put(technicalName, dv);
+      }
+
+      if (property == null || isTypeMismatch(type, property)) {
+        createField(baseClass, technicalName, prettyName, type, field.get("values"), dv);
+      } else {
+        if (property instanceof PropertyClass) {
+          PropertyClass p = (PropertyClass) property;
+          if (!Objects.equals(prettyName, p.getPrettyName())) {
+            p.setPrettyName(prettyName);
+          }
+          p.setNumber(i);
+        }
+        baseClass.addField(technicalName, property);
+        // See https://jira.xwiki.org/browse/XWIKI-23526
+        baseClass.getFieldsToRemove().remove(property);
+      }
+    }
+
+    com.xpn.xwiki.api.Object object = doc.getObject("MetadataPro.Code.MetadataSetClass", true);
+    object.set("requiredFields", requiredFields);
+    object.set("defaultValues", jsontool.serialize(defaultValues));
+
+    doc.save(l10nUpdateMetadataClass);
+  }
+
+  if (doc.isNew()) {
+    doc.save();
+    response.sendRedirect(doc.getURL())
+  }
+
+  if (request.get("action") == "update") {
+    updateFields();
+
+    response.setContentType('application/json')
+    response.getWriter().write(jsontool.serialize(Map.of("ok", true)))
+    xcontext.setFinished(true)
+  }
+{{/groovy}}
+
+{{velocity}}
+#set ($mainReference = $services.model.createDocumentReference('', ['MetadataPro', 'Code'], 'MetadataSetClassSheet'))
+#if (!$services.licensing.licensor.hasLicensureForEntity($mainReference))
+
+  {{missingLicenseMessage extensionName="metadatapro.title"/}}
+
+#elseif ($xcontext.action == "edit" || $request.outputSyntax == 'annotatedhtml' || $request.outputSyntax == 'annotatedxhtml')
+
+{{warning}}
+$services.localization.render("metadatapro.warningcantbemodifiedineditmode")
+{{/warning}}
+
+#else
+
+  $services.localization.render("metadatapro.thisisametadataset")
+
+  == $services.localization.render("metadatapro.fields")
+
+  #set ($discard = $xwiki.jsx.use('MetadataPro.Code.MetadataSetClassSheet'))
+  #set ($discard = $xwiki.ssx.use('MetadataPro.Code.MetadataSetClassSheet'))
+
+  #if (!$hasEdit)
+
+    {{warning}}
+    $services.localization.render("metadatapro.missingeditrights")
+    {{/warning}}
+
+  #else
+
+    {{warning}}
+    $services.localization.render("metadatapro.warningchangingtypescancausedataloss")
+    {{/warning}}
+
+  #end
+#end
+{{/velocity}}
+
+{{groovy}}
+  import com.xpn.xwiki.api.Class;
+  import com.xpn.xwiki.api.Element;
+  import com.xpn.xwiki.objects.classes.StaticListClass;
+  import groovy.transform.Field;
+  import org.xwiki.velocity.tools.JSONTool;
+  import groovy.xml.XmlUtil;
+
+  @Field final JSONTool jsontool = new JSONTool();
+
+  @Field final Map&lt;String, String&gt; TYPE_FRIENDLY_NAME = [
+    "StringClass": services.localization.render("metadatapro.fieldtype.string"),
+    "NumberClass/long": services.localization.render("metadatapro.fieldtype.long"),
+    "NumberClass/double": services.localization.render("metadatapro.fieldtype.double"),
+    "TextAreaClass": services.localization.render("metadatapro.fieldtype.text"),
+    "BooleanClass": services.localization.render("metadatapro.fieldtype.boolean"),
+    "DateClass": services.localization.render("metadatapro.fieldtype.date"),
+    "EmailClass": services.localization.render("metadatapro.fieldtype.email"),
+    "StaticListClass/radio": services.localization.render("metadatapro.fieldtype.listradio"),
+    "StaticListClass/select": services.localization.render("metadatapro.fieldtype.listselect"),
+    "StaticListClass/checkbox": services.localization.render("metadatapro.fieldtype.listcheckbox")
+  ];
+
+  @Field final String l10nFieldTechName = services.xml.escape(services.localization.render("metadatapro.set.th.fieldtechnicalname"));
+  @Field final String l10nFieldName = services.xml.escape(services.localization.render("metadatapro.set.th.fieldname"));
+  @Field final String l10nFieldType = services.xml.escape(services.localization.render("metadatapro.set.th.type"));
+  @Field final String l10nRequired = services.xml.escape(services.localization.render("metadatapro.set.th.required"));
+  @Field final String l10nActions = services.xml.escape(services.localization.render("metadatapro.set.th.actions"));
+  @Field final String l10nTechnicalNamesCantBeEmpty = services.xml.escape(services.localization.render('metadatapro.technicalnamescantbeempty'));
+  @Field final String l10nSomethingWentWrongSavingFields = services.xml.escape(services.localization.render('metadatapro.somethingwentwrongsavingfields'));
+  @Field final String l10nAtLeastOneField = services.xml.escape(services.localization.render('metadatapro.atleastonefield'));
+
+  boolean isManaged(String type)
+  {
+    return TYPE_FRIENDLY_NAME.containsKey(type);
+  }
+
+  String icon(String name)
+  {
+    return services.icon.renderHTML(name);
+  }
+
+  String renderValueInput(String value, boolean isDefault)
+  {
+    return (
+        '&lt;li&gt;'
+        + "&lt;input type='checkbox' autocomplete='off' class='metadatapro-default-checkbox' title='default' aria-label='default' " + (isDefault ? "checked='checked' " : "") + "/&gt;"
+        + '&lt;input class="metadatapro-list-value" aria-label="Allowed value" type="text" autocomplete="off" value="' + XmlUtil.escapeXml(value) + '"/&gt;'
+        + '&lt;span&gt;'
+        +     "&lt;button class='metadatapro-field-value-up btn-metadatapro-linklike' title='" + services.localization.render("metadatapro.actions.up") + "' aria-label='" + services.localization.render("metadatapro.actions.up") + "'&gt;${icon('up')}&lt;/button&gt;"
+        +     " "
+        +     "&lt;button class='metadatapro-field-value-down btn-metadatapro-linklike' title='" + services.localization.render("metadatapro.actions.down") + "' aria-label='" + services.localization.render("metadatapro.actions.down") + "'&gt;${icon('down')}&lt;/button&gt;"
+        +     " "
+        +     "&lt;button class='metadatapro-field-value-remove btn-metadatapro-linklike btn-metadatapro-delete' title='" + services.localization.render("metadatapro.actions.remove") + "' aria-label='" + services.localization.render("metadatapro.actions.remove") + "'&gt;${icon('cross')}&lt;/button&gt;"
+        +     " "
+        +     "&lt;button class='metadatapro-field-value-add btn-metadatapro-linklike' title='" + services.localization.render("metadatapro.actions.add") + "' aria-label='" + services.localization.render("metadatapro.actions.add") + "'&gt;${icon('add')}&lt;/button&gt;"
+        + '&lt;/span&gt;'
+        + '&lt;/li&gt;'
+      );
+  }
+
+  String renderValueInputs(List&lt;String&gt; values, List&lt;Object&gt; defaultValues)
+  {
+    String lis = "";
+    for (String value : values) {
+      lis += renderValueInput(value, defaultValues != null &amp;&amp; defaultValues.contains(value));
+    }
+    return '&lt;ul class="field-values"&gt;' + lis + '&lt;/ul&gt;';
+  }
+
+  void printTableLine(propertyName, prettyName, propertyType, required, values, defaultValues, formName)
+  {
+    def t = TYPE_FRIENDLY_NAME[propertyType];
+    def nameEscaped = services.xml.escape(propertyName);
+    def prettyNameEscaped =  services.xml.escape(prettyName);
+    println (
+      "&lt;tr class='metadatapro-field-row'&gt;"
+        + "&lt;td&gt;"
+        + "&lt;input type='checkbox' class='metadatapro-advanced-checkbox' aria-label='Advanced' /&gt;"
+        + "&lt;/td&gt;"
+        + "&lt;td&gt;"
+        +   "&lt;input autocomplete='off' " + (nameEscaped.isEmpty() ? "" : "disabled='disabled' ") + "aria-label='" + l10nFieldTechName + "' type='text' name='field-technical-name' value='" + nameEscaped + "' pattern='[_a-zA-Z][_0-9a-zA-Z]*'/&gt;"
+        + "&lt;/td&gt;"
+        + "&lt;td&gt;&lt;input autocomplete='off' aria-label='" + l10nFieldName + "' type='text' name='field-pretty-name' value='" + prettyNameEscaped + "'/&gt;&lt;/td&gt;"
+        + "&lt;td&gt;&lt;select autocomplete='off' aria-label='" + l10nFieldType + "' name='field-type'&gt;"
+    );
+
+    for (Map.Entry&lt;String, String&gt; typeEntry : TYPE_FRIENDLY_NAME) {
+      def s = typeEntry.getKey().equals(propertyType) ? " selected='selected'" : "";
+      println (
+        "&lt;option value='"
+        + services.xml.escape(typeEntry.getKey())
+        + "'"
+        + s
+        + "&gt;"
+        + typeEntry.getValue()
+        + "&lt;/option&gt;"
+      );
+    }
+    println (
+      "   &lt;/select&gt;&lt;/td&gt;"
+      +   "&lt;td&gt;&lt;input autocomplete='off' type='checkbox' aria-label='" + l10nRequired + "' name='field-required'" + (required ? " checked='checked'" : "") + " /&gt;&lt;/td&gt;"
+      +   "&lt;td&gt;"
+      +     "&lt;button class='metadatapro-field-up btn-metadatapro-linklike' title='" + services.localization.render("metadatapro.actions.up") + "' aria-label='" + services.localization.render("metadatapro.actions.up") + "'&gt;${icon('up')}&lt;/button&gt;"
+      +     " "
+      +     "&lt;button class='metadatapro-field-down btn-metadatapro-linklike' title='" + services.localization.render("metadatapro.actions.down") + "' aria-label='" + services.localization.render("metadatapro.actions.down") + "'&gt;${icon('down')}&lt;/button&gt;"
+      +     " "
+      +     "&lt;button class='metadatapro-field-remove btn-metadatapro-linklike btn-metadatapro-delete' title='" + services.localization.render("metadatapro.actions.remove") + "' aria-label='" + services.localization.render("metadatapro.actions.remove") + "'&gt;${icon('cross')}&lt;/button&gt;"
+      +     " "
+      +     "&lt;button class='metadatapro-field-add btn-metadatapro-linklike' title='" + services.localization.render("metadatapro.actions.add") + "' aria-label='" + services.localization.render("metadatapro.actions.add") + "'&gt;${icon('add')}&lt;/button&gt;"
+      +   "&lt;/td&gt;"
+      + "&lt;/tr&gt;"
+    );
+    def vals = values;
+    if (defaultValues != null) {
+      if (vals == null) {
+        vals = new ArrayList&lt;&gt;(defaultValues.size());
+      } else {
+        vals = new ArrayList(values);
+      }
+      for (String defaultValue : defaultValues) {
+        if (!vals.contains(defaultValue)) {
+          vals.add(defaultValue);
+        }
+      }
+    }
+    println (
+      "&lt;tr class='metadatapro-field-row-advanced'&gt;"
+      + "&lt;td colspan='6'&gt;"
+      + "&lt;div&gt;"
+      +   "&lt;div class='metadatapro-simple-field'&gt;&lt;p&gt;"
+      +     "&lt;label&gt;" + services.localization.render("metadatapro.defaultvalue") + " &lt;input type='text' class='metadatapro-field-default-value' value='" + XmlUtil.escapeXml((defaultValues &amp;&amp; !defaultValues.isEmpty()) ? defaultValues[0] : '') + "'/&gt;&lt;/label&gt;"
+      +   "&lt;/p&gt;&lt;/div&gt;"
+      +   "&lt;div class='metadatapro-list-field'&gt;"
+      +     "&lt;p&gt;Values (check default values): &lt;/p&gt;"
+      +     renderValueInputs(vals, defaultValues)
+      +     "&lt;p&gt;"
+      +       "&lt;button class='btn metadatapro-new-field-value-button'&gt;"
+      +         services.localization.render("metadatapro.actions.newvalue")
+      +       "&lt;/button&gt;"
+      +     "&lt;/p&gt;"
+      +   "&lt;/div&gt;"
+      + "&lt;/div&gt;"
+      + "&lt;/td&gt;"
+      + "&lt;/tr&gt;"
+    );
+  }
+
+  void printTable() {
+    Class c = doc.getxWikiClass();
+    println "{{html clean=false}}"
+    println (
+      "&lt;noscript&gt;" + services.localization.render("metadatapro.requiresjavascript") + "&lt;/noscript&gt;"
+      + "&lt;table id='table-metadatapro-fields'&gt;"
+      + "&lt;tr&gt;"
+      +   "&lt;th&gt;&lt;/th&gt;"
+      +   "&lt;th&gt;" + l10nFieldTechName + "&lt;/th&gt;"
+      +   "&lt;th&gt;" + l10nFieldName + "&lt;/th&gt;"
+      +   "&lt;th&gt;" + l10nFieldType + "&lt;/th&gt;"
+      +   "&lt;th&gt;" + l10nRequired + "&lt;/th&gt;"
+      +   "&lt;th&gt;" + l10nActions + "&lt;/th&gt;"
+      + "&lt;/tr&gt;"
+    )
+    def i = 0;
+    List&lt;String&gt; requiredFields = doc.getValue("requiredFields");
+    def dv = doc.getValue("defaultValues");
+    Map&lt;String, Object&gt; defaultValues = (dv &amp;&amp; !dv.isEmpty()) ? jsontool.parse(dv) : Map.of();
+    for (Element property : c.getProperties()) {
+      def values = List.of();
+      def type = property.type;
+      if (type == "NumberClass") {
+        type += "/" + property.getPropertyClass().getNumberType()
+      } else if (type == "StaticListClass") {
+        def bp = property.getBasePropertyClass();
+        type += "/" + bp.getDisplayType();
+        values = bp.getList();
+      }
+
+      if (isManaged(type)) {
+        printTableLine(property.name, property.prettyName, type, requiredFields.contains(property.name), values, defaultValues.get(property.name), "form-field-" + (++i));
+      }
+    }
+    println (
+          "&lt;/table&gt;"
+        + "&lt;p id='add-field-p'&gt;&lt;button class='btn btn-primary' id='metadatapro-new-field-button'&gt;" + services.localization.render("metadatapro.actions.newfield") + "&lt;/button&gt;&lt;/p&gt;"
+    );
+    println "&lt;template id='field-row-template'&gt;";
+    printTableLine("", "", "StringClass", false, List.of(), null, "");
+    println "&lt;/template&gt;";
+    println "&lt;template id='field-value-template'&gt;";
+    println renderValueInput("", false);
+    println "&lt;/template&gt;";
+    println "&lt;template id='technicalnamescantbeempty'&gt;${l10nTechnicalNamesCantBeEmpty}&lt;/template&gt;"
+    println "&lt;template id='somethingwentwrongsavingfields'&gt;${l10nSomethingWentWrongSavingFields}&lt;/template&gt;"
+    println "&lt;template id='atleastonefield'&gt;${l10nAtLeastOneField}&lt;/template&gt;"
+    println "{{/html}}"
+  }
+
+  def mainReference = services.model.createDocumentReference('', ['MetadataPro', 'Code'], 'MetadataSetClassSheet')
+  if (xcontext.action != "edit" &amp;&amp; request.outputSyntax != 'annotatedhtml' &amp;&amp; request.outputSyntax != 'annotatedxhtml' &amp;&amp; services.licensing.licensor.hasLicensureForEntity(mainReference)) {
+    printTable();
+  }
+{{/groovy}}
+
+{{include reference="XWiki.TemplateProviderMacros" /}}
+
+{{velocity}}
+#if ($xcontext.action != "edit" &amp;&amp; $request.outputSyntax != 'annotatedhtml' &amp;&amp; $request.outputSyntax != 'annotatedxhtml' &amp;&amp; $services.licensing.licensor.hasLicensureForEntity($mainReference))
+
+== $services.localization.render("metadatapro.locationrestrictions")
+
+  #set ($discard = $xwiki.ssx.use('XWiki.TemplateProviderMacros'))
+  #set ($discard = $xwiki.jsx.use('XWiki.TemplateProviderMacros'))
+  #*
+   * Adapted from XWiki.TemplateProviderMacros
+   *#
+  #macro (displayPathsPropertyValueMetadataPro $xDoc $property)
+    &lt;ul class="paths"&gt;
+      #set ($hierarchyOptions = {
+        'local': true,
+        'selfIsActive': false
+      })
+      #set ($paths = $xDoc.getValue($property))
+      #foreach ($path in $paths)
+        &lt;li class="path"&gt;
+          &lt;a href="#path-delete" class="path-delete"&gt;$services.icon.renderHTML('delete')&lt;/a&gt;
+            &lt;input type="hidden" name="MetadataPro.Code.MetadataSetClass_0_$property"
+              value="$escapetool.xml($path)" /&gt;
+          #set ($spaceReference = $services.model.resolveSpace($path))
+          #hierarchy($spaceReference $hierarchyOptions)
+        &lt;/li&gt;
+      #end
+      ## This is used as a template on the client side when a new path is added.
+      &lt;li class="path hidden"&gt;
+        &lt;a href="#path-delete" class="path-delete"&gt;$services.icon.renderHTML('delete')&lt;/a&gt;
+        &lt;input type="hidden" name="MetadataPro.Code.MetadataSetClass_0_$property" disabled="disabled" /&gt;
+        &lt;ol class="breadcrumb"&gt;
+          &lt;li class="loading"&gt;&lt;/li&gt;
+        &lt;/ol&gt;
+      &lt;/li&gt;
+      &lt;li class="path-add"&gt;
+        &lt;input type="hidden" name="MetadataPro.Code.MetadataSetClass_0_$property" value="" /&gt;
+        &lt;a href="#path-add"&gt;$services.icon.renderHTML('add')&lt;/a&gt;
+      &lt;/li&gt;
+    &lt;/ul&gt;
+  #end
+
+  #set($configDoc = $doc)
+
+  {{html clean="false" wiki="false"}}
+    &lt;form id="metadatapro-save-form" method="post" action="" class="xform"&gt;
+      &lt;div class="hidden"&gt;
+        &lt;input type="hidden" name="form_token" value="$!{services.csrf.getToken()}"&gt;
+      &lt;/div&gt;
+      &lt;div class="xform templateProviderSheet"&gt;
+        &lt;dl&gt;
+          &lt;dt&gt;
+            &lt;span class="xHint"&gt;
+              $services.localization.render('metadatapro.config.includedSpaces.hint')
+            &lt;/span&gt;
+          &lt;/dt&gt;
+          &lt;dd&gt;
+            #displayPathsPropertyValueMetadataPro($configDoc 'includedSpaces')
+          &lt;/dd&gt;
+        &lt;/dl&gt;
+        #locationPickerModal
+      &lt;/div&gt;
+      &lt;div class="clearfix"&gt;&lt;/div&gt;
+      &lt;input type=hidden name="action_save" value="1" /&gt;
+      #if ($hasEdit)
+      &lt;p id="metadata-actions"&gt;
+        &lt;input type="button" class='btn btn-primary' id='metadatapro-save-button' value="$services.localization.render("metadatapro.actions.save")" /&gt;
+        &lt;input type="button" class='btn' id='metadatapro-cancel-button' value="$services.localization.render("metadatapro.actions.cancel")" /&gt;
+      &lt;/p&gt;
+      #end
+    &lt;/form&gt;
+  {{/html}}
+
+#end
+{{/velocity}}
+</content>
+  <class>
+    <name>MetadataPro.Code.MetadataSetClassSheet</name>
+    <customClass/>
+    <customMapping/>
+    <defaultViewSheet/>
+    <defaultEditSheet/>
+    <defaultWeb/>
+    <nameField/>
+    <validationScript/>
+    <test>
+      <cache>0</cache>
+      <disabled>0</disabled>
+      <displayType>select</displayType>
+      <multiSelect>0</multiSelect>
+      <name>test</name>
+      <number>1</number>
+      <prettyName>test</prettyName>
+      <relationalStorage>0</relationalStorage>
+      <separator> </separator>
+      <separators>|, </separators>
+      <size>1</size>
+      <unmodifiable>0</unmodifiable>
+      <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+    </test>
+  </class>
+  <object>
+    <name>MetadataPro.Code.MetadataSetClassSheet</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>82eed905-1062-49c2-ae7c-0b9755ec8340</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>window.addEventListener("DOMContentLoaded", () =&gt; {
+    "use strict";
+
+    const fieldTemplate = document.getElementById("field-row-template");
+    const table = document.getElementById("table-metadatapro-fields");
+
+    function normalize(s) {
+        return (
+            s
+                .replace(/[\s'"\-.;,:*|\[\]\(\)=+{}]+/gu, " ")
+                .replace(/[àâáä]/gu, "a")
+                .replace(/[úùûü]/gu, "u")
+                .replace(/[ôóòö]/gu, "o")
+                .replace(/[íìîï]/gu, "i")
+                .replace(/[éèêë]/gu, "e")
+                .replace(/œ/gu, "oe")
+                .replace(/æ/gu, "ae")
+                .replace(/š/gu, "s")
+                .replace(/ç/gu, "c")
+                .replace(/…/gu, "...")
+        );
+    }
+
+    function technicalify(s) {
+        // - removes accents
+        // - camelify ("hello world" =&gt; "helloWorld")
+        // - removes unknown characters
+        // - make sure the field name doesn't start with a figure
+        return normalize(s.trim())
+            .replace(/[\s]+[a-zA-Z]/gu, m =&gt; m.trim().toUpperCase())
+            .replace(/[^a-zA-Z0-9_"]+/gu, "_")
+            .replace(/^[0-9]/, "_$0")
+            .replace(/^[A-Z]/, m =&gt; m.toLowerCase());
+    }
+
+    function bindAutoTechnicalNameEvents(technicalNameInput, prettyNameInput) {
+        if (technicalNameInput.disabled) {
+            return;
+        }
+        let syncedToTechnical = false;
+        let syncedToPretty = false;
+
+        function technicalifyIfInvalid() {
+            if (!technicalNameInput.checkValidity()) {
+                technicalNameInput.value = technicalify(technicalNameInput.value);
+            }
+        }
+
+        function updateSynced() {
+            syncedToTechnical = technicalNameInput.value === ""
+                || technicalNameInput.value === technicalify(prettyNameInput.value);
+            syncedToPretty = prettyNameInput.value === "" || prettyNameInput.value === technicalNameInput.value;
+        }
+
+        updateSynced();
+
+        technicalNameInput.addEventListener("keyup", () =&gt; {
+            if (syncedToPretty) {
+                prettyNameInput.value = technicalNameInput.value;
+            }
+            updateSynced();
+        });
+
+        prettyNameInput.addEventListener("keyup", () =&gt; {
+            if (syncedToTechnical) {
+                technicalNameInput.value = technicalify(prettyNameInput.value);
+            }
+            updateSynced();
+        });
+
+        technicalNameInput.addEventListener("blur", technicalifyIfInvalid);
+        technicalNameInput.addEventListener("change", technicalifyIfInvalid);
+    }
+
+    function bindAutoTechnicalNameEventsTR(tr) {
+        const technicalNameInput = tr.querySelector("[name='field-technical-name']");
+        const prettyNameInput = tr.querySelector("[name='field-pretty-name']");
+        bindAutoTechnicalNameEvents(technicalNameInput, prettyNameInput);
+    }
+
+
+    function bindActionEvents(tr) {
+        tr.querySelector(".metadatapro-field-remove").addEventListener("click",
+            () =&gt; void(tr.remove())
+        );
+
+        tr.querySelector(".metadatapro-field-up").addEventListener("click",
+           () =&gt; {
+                const advancedTR = tr.nextElementSibling;
+                const p = tr?.previousElementSibling?.previousElementSibling;
+                if (p &amp;&amp; p.firstChild.nodeName.toLowerCase() != "th") {
+                    p.before(tr);
+                    tr.after(advancedTR);
+                }
+            }
+        );
+
+        tr.querySelector(".metadatapro-field-down").addEventListener("click",
+            () =&gt; {
+                const advancedTR = tr.nextElementSibling;
+                const n = tr.nextElementSibling?.nextElementSibling?.nextElementSibling;
+                if (n) {
+                    n.after(tr);
+                    tr.after(advancedTR);
+                }
+            }
+        );
+
+        tr.querySelector(".metadatapro-field-add").addEventListener("click", addField.bind(null, tr.nextElementSibling));
+    }
+
+    const newValueTemplate = document.getElementById("field-value-template");
+
+    function bindValueEvents(li) {
+        const addValue = li.querySelector(".metadatapro-field-value-add");
+        const removeValue = li.querySelector(".metadatapro-field-value-remove");
+        const up = li.querySelector(".metadatapro-field-value-up");
+        const down = li.querySelector(".metadatapro-field-value-down");
+
+        addValue.addEventListener("click", () =&gt; {
+            const li = createValueInputLI();
+            addValue.closest("li").after(li);
+            li.querySelector("input[type=text]").focus();
+        });
+
+        removeValue.addEventListener("click", () =&gt; {
+           removeValue.closest("li").remove();
+        });
+
+        up.addEventListener("click", () =&gt; {
+           const li = up.closest("li");
+           const p = li.previousElementSibling;
+           if (p) {
+               p.before(li);
+           }
+        });
+
+        down.addEventListener("click", () =&gt; {
+           const li = up.closest("li");
+           const n = li.nextElementSibling;
+           if (n) {
+               n.after(li);
+           }
+        });
+
+        li.querySelector("input[type='text']").addEventListener("keydown", e =&gt; {
+            if (e.keyCode === 13) {
+                addValue.click();
+            }
+        });
+    }
+
+    function createValueInputLI() {
+        const newValue = newValueTemplate.content.cloneNode(true);
+        bindValueEvents(newValue)
+        return newValue.querySelector("li");
+    }
+
+    function bindAdvancedActionEvents(advancedFieldTR) {
+        advancedFieldTR.querySelector(".metadatapro-new-field-value-button").addEventListener("click", () =&gt; {
+            const li = createValueInputLI(advancedFieldTR);
+            advancedFieldTR.querySelector(".field-values").append(li);
+            li.querySelector("input[type='text']").focus();
+        });
+
+        for (const li of advancedFieldTR.querySelectorAll('.field-values &gt; li')) {
+            bindValueEvents(li);
+        }
+    }
+
+    function bindFieldEvents(fieldTR, advancedFieldTR) {
+        bindAutoTechnicalNameEventsTR(fieldTR);
+        bindActionEvents(fieldTR);
+        bindAdvancedActionEvents(advancedFieldTR);
+    }
+
+    async function save() {
+        const fields = [];
+        for (const tr of table.getElementsByClassName("metadatapro-field-row")) {
+            const advancedTR = tr.nextElementSibling;
+
+            const technicalNameInput = tr.querySelector("[name='field-technical-name']");
+            const prettyNameInput    = tr.querySelector("[name='field-pretty-name']");
+            const requiredInput      = tr.querySelector("[name='field-required']");
+            const typeInput          = tr.querySelector("[name='field-type']");
+            const defaultValueInput  = advancedTR.querySelector(".metadatapro-field-default-value");
+
+            const technicalName = technicalNameInput.value.trim();
+            if (technicalName == "") {
+                alert(document.getElementById("technicalnamescantbeempty").content.textContent);
+                technicalNameInput.focus();
+                return;
+            }
+
+            const type = typeInput.value;
+
+            const valueInputs = advancedTR.getElementsByClassName("metadatapro-list-value");
+            const values  = [].map.call(valueInputs, input =&gt; input.value);
+
+            const defaultValues = type.startsWith("StaticListClass/")
+                ? [].map.call(
+                    advancedTR.querySelectorAll(":checked + .metadatapro-list-value"),
+                    input =&gt; input.value
+                )
+                : (defaultValueInput.value === "" ? null : [defaultValueInput.value]);
+
+            fields.push({
+                technicalName,
+                prettyName: prettyNameInput.value,
+                required: requiredInput.checked,
+                type,
+                defaultValues: defaultValues == null ? null : (defaultValues.length &gt; 0 ? defaultValues : null) ,
+                values
+            });
+        }
+
+        if (!fields.length) {
+            alert(document.getElementById("atleastonefield").content.textContent);
+            return;
+        }
+
+        const response = await fetch(
+            location.href.split('?')[0] + "?action=update&amp;outputSyntax=plain&amp;xpage=plain", {
+                method: "POST",
+                body: JSON.stringify(fields)
+            }
+        );
+
+        try {
+            if (response.ok) {
+                const r = await response.json();
+                if (r.ok) {
+                    //location.reload();
+                    document.getElementById("metadatapro-save-form").submit();
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("Saving failed", e);
+        }
+
+        alert(document.getElementById("somethingwentwrongsavingfields").content.textContent);
+    }
+
+    function addField(afterTR) {
+        const [newTR, newAdvancedTR] = fieldTemplate.content.cloneNode(true).children;
+        const tableBody = table.querySelector(":scope &gt; tbody");
+        if (afterTR) {
+            afterTR.after(newTR, newAdvancedTR);
+        } else {
+            (tableBody || table).append(newTR, newAdvancedTR);
+        }
+        bindFieldEvents(newTR, newAdvancedTR);
+        newTR.querySelector('input[type="text"]').focus();
+    }
+
+    function initEvents() {
+        for (const tr of table.getElementsByClassName("metadatapro-field-row")) {
+            bindFieldEvents(tr, tr.nextElementSibling);
+        }
+
+        document.getElementById("metadatapro-new-field-button").addEventListener("click", addField.bind(null, null));
+        document.getElementById("metadatapro-save-button").addEventListener("click", save);
+        document.getElementById("metadatapro-cancel-button").addEventListener("click", () =&gt; {
+            location.reload();
+        });
+    }
+
+    initEvents();
+});
+</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>onDemand</use>
+    </property>
+  </object>
+  <object>
+    <name>MetadataPro.Code.MetadataSetClassSheet</name>
+    <number>0</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>6656d281-d939-4b30-9320-b2ae51fcf45e</guid>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>6</number>
+        <prettyName>Content Type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>CSS|LESS</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>#table-metadatapro-fields {
+  border-bottom:1px solid #ddd;
+
+  &gt; tr:first-child, &gt; tbody &gt; tr:first-child {
+    display:none;
+  }
+
+  &amp;:has(.metadatapro-field-row) {
+    + #add-field-p {
+      display: none;
+    }
+
+    &gt; tr:first-child, &gt; tbody &gt; tr:first-child {
+      display:table-row;
+    }
+  }
+}
+
+.metadatapro-list-field {
+  width: 100%;
+  display: none;
+}
+
+.metadatapro-simple-field {
+  width: 100%;
+  display: block;
+
+  label {
+    display: flex;
+    gap: 1ex;
+    align-items: center;
+
+    input {
+      flex: 1;
+    }
+  }
+}
+
+.metadatapro-field-row {
+  &gt; td {
+    vertical-align: middle;
+  }
+
+  &amp;:has([name='field-type'] &gt; [value^="StaticListClass/"]:checked) + tr  {
+    .metadatapro-list-field {
+      display: block;
+    }
+    .metadatapro-simple-field {
+      display: none;
+    }
+  }
+
+  &amp;:has(.metadatapro-advanced-checkbox:checked) + tr {
+    display: table-row;
+  }
+
+  input, select {
+    width: 100%;
+  }
+}
+
+
+input.metadatapro-advanced-checkbox[type=checkbox] {
+  appearance: none;
+  -webkit-appearance: none;
+  &amp;:not(:checked):before {
+    content: "▶";
+  }
+  &amp;:checked:before {
+    content: "▼";
+  }
+}
+
+.metadatapro-field-row-advanced {
+  display: none;
+
+  label { font-weight: normal; }
+  p { margin: 0 }
+
+  &gt; td &gt; div {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 2em;
+  }
+}
+
+.field-values {
+  list-style: none;
+  padding: 0;
+  margin:0;
+
+  &amp;:not(:empty) + p {
+    display:none;
+  }
+
+  &gt; li {
+    display: flex;
+    gap: 1em;
+    margin-bottom:0.5ex;
+
+    &gt; span {
+      display: flex; /* aligns vertically */
+      gap: 0.5ex;
+    }
+
+    &gt; input[type="text"] {
+      flex: 1;
+    }
+  }
+}
+
+</code>
+    </property>
+    <property>
+      <contentType>CSS</contentType>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>onDemand</use>
+    </property>
+  </object>
+</xwikidoc>

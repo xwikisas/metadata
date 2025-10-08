@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.xwiki.parent</groupId>
+    <artifactId>xwikisas-parent-platform</artifactId>
+    <version>14.10-2</version>
+  </parent>
+  <groupId>com.xwiki.metadata</groupId>
+  <artifactId>metadata</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <name>Metadata Pro - Parent POM</name>
+  <packaging>pom</packaging>
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/xwikisas/metadata/issues</url>
+  </issueManagement>
+  <scm>
+    <connection>scm:git:git://github.com/xwikisas/metadata.git</connection>
+    <developerConnection>scm:git:git@github.com:xwikisas/metadata.git</developerConnection>
+    <url>https://github.com/xwikisas/metadata/tree/master</url>
+    <tag>HEAD</tag>
+  </scm>
+  <properties>
+    <licensing.version>1.29</licensing.version>
+    <listeneradmin.version>1.0.2</listeneradmin.version>
+    <xwiki.extension.category>application</xwiki.extension.category>
+  </properties>
+  <modules>
+    <module>metadata-ui</module>
+    <module>metadata-confluence-migrator</module>
+    <module>metadata-xip</module>
+  </modules>
+  <build>
+    <extensions>
+      <!-- Needed to add support for the "xip" packaging -->
+      <extension>
+        <groupId>org.xwiki.commons</groupId>
+        <artifactId>xwiki-commons-tool-extension-plugin</artifactId>
+        <version>${commons.version}</version>
+      </extension>
+    </extensions>
+    <!--  TODO: Remove this section once the parent of the application is >= 15.10.6  -->
+    <plugins>
+      <plugin>
+        <!-- Apply the Checkstyle configurations defined in the top level pom.xml file -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <executions>
+          <execution>
+            <!-- Specify the "default" execution id so that the "blocker" one is always executed -->
+            <id>default</id>
+            <configuration>
+              <excludes>
+                **/DocumentInstanceOutputFilterStream.java
+              </excludes>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+    <pluginManagement>
+      <plugins>
+        <!-- Use a more recent version of Spoon to avoid URL classloader issue with Java 17 -->
+        <plugin>
+          <groupId>fr.inria.gforge.spoon</groupId>
+          <artifactId>spoon-maven-plugin</artifactId>
+          <version>3.8.0</version>
+          <dependencies>
+            <dependency>
+              <groupId>fr.inria.gforge.spoon</groupId>
+              <artifactId>spoon-core</artifactId>
+              <version>10.4.2</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <!-- Make sure we can build with Java 17 -->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <argLine>@{argLine} -Xmx1024m -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=${project.build.directory} --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.util.concurrent=ALL-UNNAMED</argLine>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+</project>

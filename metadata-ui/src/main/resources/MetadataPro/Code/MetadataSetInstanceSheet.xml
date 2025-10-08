@@ -1,0 +1,370 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.6" reference="MetadataPro.Code.MetadataSetInstanceSheet" locale="">
+  <web>MetadataPro.Code</web>
+  <name>MetadataSetInstanceSheet</name>
+  <parent>WebHome</parent>
+  <language/>
+  <defaultLanguage/>
+  <translation>0</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title/>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>xwiki/2.1</syntaxId>
+  <hidden>true</hidden>
+  <content>{{groovy}}
+import com.xpn.xwiki.api.PropertyClass;
+import org.xwiki.velocity.tools.JSONTool;
+
+JSONTool jsontool = new JSONTool();
+
+if (request.editmetadataset == "1") {
+    xwiki.jsx.use('MetadataPro.Code.MetadataSetInstanceSheet');
+    xwiki.ssx.use('MetadataPro.Code.MetadataSetInstanceSheet');
+
+    def metadataset = request.metadataset;
+    if (metadataset) {
+        def setDoc = xwiki.getDocument(metadataset)
+        def setObj = setDoc.getObject("MetadataPro.Code.MetadataSetClass");
+        if (setObj) {
+            def requiredFields = setObj.getValue("requiredFields");
+            def defaultValuesStr = setObj.getValue("defaultValues");
+            def defaultValues = (defaultValuesStr == null || defaultValuesStr == "") ? [] : jsontool.fromString(defaultValuesStr);
+            println "Editing data for set ${setDoc.getTitle()}:";
+            def objIsNew = false;
+            def obj = doc.getObject(metadataset);
+            if (!obj) {
+                objIsNew = true;
+                obj = doc.getObject(metadataset, true);
+                def objInputName = metadataset + "_" + obj.number;
+                println "{{html clean=false}}&lt;input type='hidden' name='addedObjects' value='" + services.xml.escape(objInputName) + "' /&gt;{{/html}}";
+            }
+            println "\n\n{{html clean=false}}&lt;div class='xform'&gt;{{/html}}\n"
+            def xclass = obj.xWikiClass;
+            for (PropertyClass property : xclass.properties) {
+                def required = requiredFields.contains(property.name);
+                if (objIsNew) {
+                    def defVals = defaultValues.get(property.name);
+                    if (defVals != null &amp;&amp; !defVals.isEmpty()) {
+                        obj.set(property.name, property.type == "StaticListClass" ? defVals : defVals[0]);
+                    }
+                }
+                println "; " + property.prettyName + (required ? "{{html}}&lt;span class='metadatapro-required'&gt;*&lt;/span&gt;{{/html}}" : "")
+                println ": " + (required ? "{{html clean='false'}}&lt;span class='metadatapro-required-field'&gt;{{/html}}" : "") + doc.display(property.getName()) + (required ? "{{html clean='false'}}&lt;/span&gt;{{/html}}" : "")
+            }
+            println "\n\n{{html clean=false}}&lt;/div&gt;{{/html}}\n"
+        } else {
+            println services.localization.render("metadatapro.nosuchset")
+        }
+    } else {
+        println services.localization.render("metadatapro.nosuchset")
+    }
+} else if (request.deletemetadataset == "1") {
+    def metadataset = request.metadataset;
+    def obj = null;
+    if (metadataset) {
+        def setDoc = xwiki.getDocument(metadataset)
+        if (setDoc.getObject("MetadataPro.Code.MetadataSetClass")) {
+            obj = doc.getObject(metadataset);
+        }
+    }
+
+    if (obj) {
+        def objInputName = metadataset + "_" + obj.number;
+        println "{{html clean=false}}&lt;input type='hidden' name='deletedObjects' value='" + services.xml.escape(objInputName) + "' /&gt;{{/html}}";
+        println ""
+        println "{{info}}"
+        println services.localization.render("metadatapro.savetoconfirmdeletion")
+        println "{{/info}}"
+        println ""
+
+    } else {
+        println ""
+        println "{{warning}}"
+        println services.localization.render("metadatapro.nosuchset")
+        println "{{/warning}}"
+        println ""
+    }
+}
+
+println "{{html clean=false}}&lt;template id='warnmissingrequiredfields'&gt;${services.localization.render('metadatapro.warnmissingrequiredfields')}&lt;/template&gt;{{/html}}"
+{{/groovy}}
+</content>
+  <object>
+    <name>MetadataPro.Code.MetadataSetInstanceSheet</name>
+    <number>0</number>
+    <className>XWiki.JavaScriptExtension</className>
+    <guid>41d2e6c0-6f62-4359-82fd-7c54d36a9bfe</guid>
+    <class>
+      <name>XWiki.JavaScriptExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>window.addEventListener("DOMContentLoaded", () =&gt; {
+  "use strict";
+  if (document.observe) {
+    document.observe("xwiki:actions:beforeSave", e =&gt; {
+      for (const requiredContainer of document.getElementsByClassName('metadatapro-required-field')) {
+        let found = false;
+        for (const filledInput of requiredContainer.querySelectorAll(":checked, input, textarea")) {
+          if (filledInput.type === "radio" || filledInput.type == "checkbox") {
+            if (filledInput.checked) {
+              found = true;
+              break;
+            }
+          } else if (filledInput.value !== "") {
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+          alert(document.getElementById("warnmissingrequiredfields").content.textContent);
+          e.preventDefault();
+          const firstInputOfRequiredContainer = requiredContainer.querySelector("input, select");
+          if (firstInputOfRequiredContainer) {
+            firstInputOfRequiredContainer.focus();
+          }
+          return;
+        }
+      }
+    });
+  }
+})
+</code>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
+  <object>
+    <name>MetadataPro.Code.MetadataSetInstanceSheet</name>
+    <number>0</number>
+    <className>XWiki.StyleSheetExtension</className>
+    <guid>8c153ef6-4093-44a3-8cbf-6dd79bc844db</guid>
+    <class>
+      <name>XWiki.StyleSheetExtension</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <cache>
+        <cache>0</cache>
+        <defaultValue>long</defaultValue>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>cache</name>
+        <number>5</number>
+        <prettyName>Caching policy</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>long|short|default|forbid</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </cache>
+      <code>
+        <contenttype>PureText</contenttype>
+        <disabled>0</disabled>
+        <editor>PureText</editor>
+        <name>code</name>
+        <number>2</number>
+        <prettyName>Code</prettyName>
+        <restricted>0</restricted>
+        <rows>20</rows>
+        <size>50</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.TextAreaClass</classType>
+      </code>
+      <contentType>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>contentType</name>
+        <number>6</number>
+        <prettyName>Content Type</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>CSS|LESS</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </contentType>
+      <name>
+        <disabled>0</disabled>
+        <name>name</name>
+        <number>1</number>
+        <prettyName>Name</prettyName>
+        <size>30</size>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.StringClass</classType>
+      </name>
+      <parse>
+        <disabled>0</disabled>
+        <displayFormType>select</displayFormType>
+        <displayType>yesno</displayType>
+        <name>parse</name>
+        <number>4</number>
+        <prettyName>Parse content</prettyName>
+        <unmodifiable>0</unmodifiable>
+        <classType>com.xpn.xwiki.objects.classes.BooleanClass</classType>
+      </parse>
+      <use>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>use</name>
+        <number>3</number>
+        <prettyName>Use this extension</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>currentPage|onDemand|always</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </use>
+    </class>
+    <property>
+      <cache>long</cache>
+    </property>
+    <property>
+      <code>.metadatapro-required {
+  color: var(--brand-danger);
+}</code>
+    </property>
+    <property>
+      <contentType/>
+    </property>
+    <property>
+      <name/>
+    </property>
+    <property>
+      <parse>0</parse>
+    </property>
+    <property>
+      <use>currentPage</use>
+    </property>
+  </object>
+</xwikidoc>
