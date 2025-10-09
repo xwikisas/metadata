@@ -264,14 +264,36 @@ public class MetadataForConfluenceMigrationScriptService implements ScriptServic
             fields.put(field.key, field);
         }
 
-        progress.pushLevelProgress(2, this);
+        importSetsAndValues(s, referenceTemplate, titleTemplate, data, fields);
+    }
 
-        Map<String, Map<String, String>> importedSetsPerSpace =
-            importMetadataSets(s, data.metadataSets, fields, referenceTemplate, titleTemplate);
+    private void importSetsAndValues(Stats s, String referenceTemplate, String titleTemplate,
+        MetadataForConfluenceExport data, Map<String, MetadataForConfluenceField> fields)
+    {
+        boolean noSets = data.metadataSets == null || data.metadataSets.isEmpty();
+        boolean noValues = data.metadataValues == null || data.metadataValues.isEmpty();
+        int steps = 2 - (noValues ? 1 : 0) - (noSets ? 1 : 0);
 
-        importMetadataValues(s, importedSetsPerSpace, data.metadataValues, fields);
+        if (steps > 0) {
+            progress.pushLevelProgress(steps, this);
+        }
 
-        progress.popLevelProgress(this);
+        Map<String, Map<String, String>> importedSetsPerSpace = Map.of();
+        if (noSets) {
+            logger.info("There are no metadata sets in this export.");
+        } else {
+            importedSetsPerSpace = importMetadataSets(s, data.metadataSets, fields, referenceTemplate, titleTemplate);
+        }
+
+        if (noValues) {
+            logger.info("There are no metadata values in this export.");
+        } else {
+            importMetadataValues(s, importedSetsPerSpace, data.metadataValues, fields);
+        }
+
+        if (steps > 0) {
+            progress.popLevelProgress(this);
+        }
     }
 
     private void importMetadataValues(Stats s, Map<String, Map<String, String>> importedSetsPerSpace,
@@ -317,8 +339,13 @@ public class MetadataForConfluenceMigrationScriptService implements ScriptServic
     private void addValues(Stats s, Map<String, MetadataForConfluenceField> fields,
         MetadataForConfluenceContentEntityObject o, Document valueDoc, String setRef)
     {
-        logger.info("Setting values in [{}] for set [{}]", valueDoc.getDocumentReference(), setRef);
         com.xpn.xwiki.api.Object object = valueDoc.getObject(setRef, true);
+        if (o.metadataFieldValues == null || o.metadataFieldValues.isEmpty()) {
+            logger.info("There are no values for set [{}] in this export", setRef);
+            return;
+        }
+
+        logger.info("Setting values in [{}] for set [{}]", valueDoc.getDocumentReference(), setRef);
         for (Map.Entry<String, Object> field : o.metadataFieldValues.entrySet()) {
             String fieldName = field.getKey();
             String xwikiFieldName = getXWikiFieldName(fieldName);

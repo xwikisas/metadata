@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.xwiki.contrib.confluence.resolvers.ConfluencePageTitleResolver;
@@ -64,6 +65,7 @@ import com.xpn.xwiki.test.reference.ReferenceComponentList;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -87,7 +89,11 @@ class MetadataForConfluenceMigrationScriptServiceTest
     private static final String CODE = "Code";
     private static final String METADATA_PRO = "MetadataPro";
     private static final List<String> METADATA_PRO_CODE = List.of(METADATA_PRO, CODE);
-    private static final String METADATA_JSON = "metadata.json";
+    private static final String DOT_JSON = ".json";
+    private static final String PACKAGE = "package";
+    private static final String EXECUTED = "executed";
+    private static final String TITLE_TEMPLATE = "titleTemplate";
+    private static final String REFERENCE_TEMPLATE1 = "referenceTemplate";
     private static final String REFERENCE_TEMPLATE = "MetadataPro.Sets.${spaceKey}_${setName}";
     private static final String SET_TITLE_TEMPLATE = "${setName}";
     private static final String TEST_SPACE = "TestSpace";
@@ -98,9 +104,6 @@ class MetadataForConfluenceMigrationScriptServiceTest
     private static final DocumentReference MYSET_REF = new DocumentReference(XWIKI, SETS, "TestSpace_myset");
     private static final DocumentReference MYSET2_REF = new DocumentReference(XWIKI,SETS, "TestSpace_myset2");
     private static final DocumentReference NEWSET_REF = new DocumentReference(XWIKI,SETS, "TestSpace_newset");
-
-    private static final DocumentReference MIGRATION_DOC_REF = new DocumentReference(XWIKI, "Migrations",
-        "Migration");
 
     private static final EntityReference TEST_SPACE_REF = new EntityReference(TEST_SPACE,
         EntityType.SPACE, new WikiReference(XWIKI));
@@ -154,30 +157,43 @@ class MetadataForConfluenceMigrationScriptServiceTest
     @MockComponent
     private ConfluenceSpaceKeyResolver confluenceSpaceKeyResolver;
 
-    @Test
-    void testMigration1() throws IOException, XWikiException, ConfluenceResolverException, ParseException
+    @BeforeEach
+    void before() throws XWikiException
     {
         Logger logger = (Logger) LoggerFactory.getLogger(MetadataForConfluenceMigrationScriptService.class);
         logger.setLevel(Level.ERROR);
+        prepareRights();
+    }
+
+    @Test
+    void testMigration1() throws IOException, XWikiException, ConfluenceResolverException, ParseException
+    {
+        String packageName = "metadata";
+
         prepareConfluencePages();
         prepareSetDocuments();
-        prepareRights();
-        migrate();
+        migrate(packageName);
 
         XWikiContext xcontext = oldCore.getXWikiContext();
         XWiki wiki = xcontext.getWiki();
-        checkMigrationObjet(wiki, xcontext);
+        checkMigrationObject(packageName, wiki, xcontext);
         checkMigratedObjects(wiki, xcontext);
         checkMigratedSets(wiki, xcontext);
     }
 
-    private static void checkMigrationObjet(XWiki wiki, XWikiContext xcontext) throws XWikiException
+    @Test
+    void testMigrationNoValuesDoesntCrash() {
+        assertDoesNotThrow(() -> migrate("novalues"));
+    }
+
+    private static void checkMigrationObject(String packageName, XWiki wiki, XWikiContext xcontext) throws XWikiException
     {
-        XWikiDocument migrationDoc = wiki.getDocument(MIGRATION_DOC_REF, xcontext).clone();
+        DocumentReference migrationDocRef = getMigrationDocRef(packageName);
+        XWikiDocument migrationDoc = wiki.getDocument(migrationDocRef, xcontext).clone();
         BaseObject migrationObject = migrationDoc.getXObject(MIGRATION_CLASS);
-        assertTrue(wiki.exists(MIGRATION_DOC_REF, xcontext));
+        assertTrue(wiki.exists(migrationDocRef, xcontext));
         assertNotNull(migrationObject);
-        assertEquals(1, migrationObject.getIntValue("executed"));
+        assertEquals(1, migrationObject.getIntValue(EXECUTED));
     }
 
     private static void checkMigratedSets(XWiki wiki, XWikiContext xcontext)
@@ -346,10 +362,10 @@ class MetadataForConfluenceMigrationScriptServiceTest
         );
     }
 
-    private void migrate() throws IOException, XWikiException
+    private void migrate(String packageName) throws IOException, XWikiException
     {
         XWikiContext xcontext = oldCore.getXWikiContext();
-        XWikiDocument migrationDoc = prepareMigrationDoc();
+        XWikiDocument migrationDoc = prepareMigrationDoc(packageName);
         migrator.run(new Document(migrationDoc, xcontext), REFERENCE_TEMPLATE,
             SET_TITLE_TEMPLATE);
     }
@@ -364,29 +380,34 @@ class MetadataForConfluenceMigrationScriptServiceTest
         when(currentUserReferenceUserReferenceResolver.resolve(any(), any())).thenReturn((UserReference) () -> true);
     }
 
-    private XWikiDocument prepareMigrationDoc() throws IOException, XWikiException
+    private XWikiDocument prepareMigrationDoc(String packageName) throws IOException, XWikiException
     {
-        initPackageStore();
+        initPackageStore(packageName);
         XWikiContext xcontext = oldCore.getXWikiContext();
         XWiki wiki = xcontext.getWiki();
-        XWikiDocument migrationDoc = wiki.getDocument(MIGRATION_DOC_REF, xcontext);
+        XWikiDocument migrationDoc = wiki.getDocument(getMigrationDocRef(packageName), xcontext);
         BaseObject migrationObject = migrationDoc.getXObject(MIGRATION_CLASS, true, xcontext);
-        migrationObject.setStringValue("package", METADATA_JSON);
-        migrationObject.setIntValue("executed", 0);
-        migrationObject.setStringValue("titleTemplate", SET_TITLE_TEMPLATE);
-        migrationObject.setStringValue("referenceTemplate", REFERENCE_TEMPLATE);
+        migrationObject.setStringValue(PACKAGE, packageName + DOT_JSON);
+        migrationObject.setIntValue(EXECUTED, 0);
+        migrationObject.setStringValue(TITLE_TEMPLATE, SET_TITLE_TEMPLATE);
+        migrationObject.setStringValue(REFERENCE_TEMPLATE1, REFERENCE_TEMPLATE);
         migrationObject.setStringListValue(SPACES, List.of());
         // we don't save the document here. It's not needed and we want to test that the migration does it.
         return migrationDoc;
     }
 
-    private void initPackageStore() throws XWikiException, IOException
+    private static DocumentReference getMigrationDocRef(String packageName)
+    {
+        return new DocumentReference(XWIKI, "Migrations", packageName);
+    }
+
+    private void initPackageStore(String packageName) throws XWikiException, IOException
     {
         XWikiContext xcontext = oldCore.getXWikiContext();
         XWiki wiki = xcontext.getWiki();
         XWikiDocument packageStore = wiki.getDocument(PACKAGE_STORE_REF, xcontext);
-        packageStore.setAttachment(METADATA_JSON, getClass().getClassLoader().getResourceAsStream(METADATA_JSON),
-            xcontext);
+        String json = packageName + DOT_JSON;
+        packageStore.setAttachment(json, getClass().getClassLoader().getResourceAsStream(json), xcontext);
         wiki.saveDocument(packageStore, xcontext);
     }
 }
