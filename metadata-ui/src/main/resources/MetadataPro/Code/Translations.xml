@@ -52,8 +52,8 @@ metadatapro.warnmissingrequiredfields=Please fill all the required fields
 metadatapro.atleastonefield=You must add at least one field
 metadatapro.somethingwentwrongsavingfields=Sorry, something went wrong when saving the fields
 metadatapro.importfromconfluence=Import from Metadata for Confluence
-metadatapro.importfromconfluenceexplanation=Coming from Metadata for Confluence? You can use the [[migrator&gt;&gt;MetadataPro.MetadataForConfluenceMigrator.WebHome]] to import your metadata.
-metadatapro.importfromconfluencead=Coming from Metadata for Confluence? You can install the Metadata Confluence Migrator Pro application to import your metadata.
+metadatapro.importfromconfluenceexplanation=Coming from Metadata for Confluence? You can use the [[migrator&gt;&gt;ConfluenceMigratorPro.Metadata.WebHome]] to import your metadata.
+metadatapro.importfromconfluencead=Coming from Metadata for Confluence? You can install the [[Confluence Migration Toolkit&gt;&gt;https://store.xwiki.com/xwiki/bin/view/Extension/Confluence%20Migration%20Toolkit/]] to import your metadata.
 metadatapro.updatemetadataclasssavemessage="Update metadata class"
 metadatapro.livedata.doc.author=Author
 metadatapro.livedata.doc.title=Metadata Set
@@ -99,25 +99,7 @@ metadatapro.defaultvalue=Default value:
 metadatapro.fieldtype.listcheckbox=Checkboxes
 metadatapro.fieldtype.listradio=Radio buttons
 metadatapro.fieldtype.listselect=Select
-metadatapro.missingeditrights=You don't have edit rights on this metadata set, you won't be able to save your changes.
-metadatapro.metadataforconfluencemigration.livetable.emptyvalue=-
-metadatapro.metadataforconfluencemigration.stat.importedValues=Imported metadata values
-metadatapro.metadataforconfluencemigration.stat.importedSets=Imported metadata sets
-metadatapro.metadataforconfluencemigration.stat.importedFields=Imported metadata set fields
-metadatapro.metadataforconfluencemigration.stat.failedValues=Failed metadata values
-metadatapro.metadataforconfluencemigration.stat.failedSets=Failed metadata sets
-metadatapro.metadataforconfluencemigration.stat.skippedFields=Skipped metadata set fields
-metadatapro.metadataforconfluencemigration.stat.unknownTypeFields=Unknown metadata set fields type
-metadatapro.metadataforconfluencemigration.space=Space
-metadatapro.metadataforconfluencemigration.package=Package
-metadatapro.metadataforconfluencemigration.executed=Executed
-metadatapro.metadataforconfluencemigration.refreshinvite=At the end of the migration, don't forget to check the job log. Then, [[refresh the page&gt;&gt;||queryString=]] and check if the numbers check out.
-metadatapro.metadataforconfluencemigration.livetable.emptyvalue=-
-metadatapro.metadataforconfluencemigration.livetable.doc.title=Title
-metadatapro.metadataforconfluencemigration.livetable.executed=Executed
-metadatapro.metadataforconfluencemigration.livetable.doc.date=Date
-metadatapro.metadataforconfluencemigration.livetable.doc.author=Author
-metadatapro.metadataforconfluencemigration.livetable.actions=Actions</content>
+metadatapro.missingeditrights=You don't have edit rights on this metadata set, you won't be able to save your changes.</content>
   <object>
     <name>MetadataPro.Code.Translations</name>
     <number>0</number>

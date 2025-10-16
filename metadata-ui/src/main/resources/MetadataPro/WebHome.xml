@@ -59,7 +59,7 @@
 
     = $services.localization.render('metadatapro.importfromconfluence') =
 
-    #if ($xwiki.exists("MetadataPro.MetadataForConfluenceMigrator.WebHome"))
+    #if ($xwiki.exists("ConfluenceMigratorPro.Metadata.WebHome"))
         $services.localization.render('metadatapro.importfromconfluenceexplanation')
     #else
         $services.localization.render('metadatapro.importfromconfluencead')

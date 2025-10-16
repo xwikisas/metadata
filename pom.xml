@@ -55,7 +55,6 @@
   </properties>
   <modules>
     <module>metadata-ui</module>
-    <module>metadata-confluence-migrator</module>
     <module>metadata-xip</module>
   </modules>
   <build>
