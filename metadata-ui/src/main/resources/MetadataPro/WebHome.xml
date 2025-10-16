@@ -39,7 +39,7 @@
   <content>{{velocity}}
 
 #set ($mainReference = $services.model.createDocumentReference('', ['MetadataPro', 'Code'], 'MetadataSetClassSheet'))
-#if (!$services.licensing.licensor.hasLicensureForEntity($mainReference))
+#if (false || !$services.licensing.licensor.hasLicensureForEntity($mainReference))
 
   {{missingLicenseMessage extensionName="metadatapro.title"/}}
 

@@ -467,7 +467,7 @@ order=10000
     <property>
       <content>{{velocity}}{{html clean="false"}} ## we need clean="false" because we want to display the raw content of #submenuitem()
 #set ($mainReference = $services.model.createDocumentReference('', ['MetadataPro', 'Code'], 'MetadataSetClassSheet'))
-#if ($services.licensing.licensor.hasLicensureForEntity($mainReference))
+#if (true || $services.licensing.licensor.hasLicensureForEntity($mainReference))
  #template('menus_macros.vm')
  #submenuitem($doc.getURL("view", "sheet=MetadataPro.Code.MetadataProSheet"), $services.localization.render('metadatapro.editaction'), 'metadatapro', '', 'list')
 #end

@@ -42,8 +42,14 @@
     <url>https://github.com/xwikisas/metadata/tree/master</url>
     <tag>HEAD</tag>
   </scm>
+  <developers>
+    <developer>
+      <id>xwikisas</id>
+      <name>XWiki SAS</name>
+      <url>http://xwiki.com</url>
+    </developer>
+  </developers>
   <properties>
-    <licensing.version>1.29</licensing.version>
     <listeneradmin.version>1.0.2</listeneradmin.version>
     <xwiki.extension.category>application</xwiki.extension.category>
   </properties>
