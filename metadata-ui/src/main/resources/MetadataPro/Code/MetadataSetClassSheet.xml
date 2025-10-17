@@ -134,6 +134,12 @@
       case "NumberClass/double":
         baseClass.addNumberField(technicalName, prettyName, 30, "double");
         return;
+      case "PageClass/single":
+        baseClass.addPageField(technicalName, prettyName, 30, false);
+        return;
+      case "PageClass/multi":
+        baseClass.addPageField(technicalName, prettyName, 30, true);
+        return;
       case "TextAreaClass":
         baseClass.addTextAreaField(technicalName, prettyName, 80, 10);
         return;
@@ -295,7 +301,9 @@ $services.localization.render("metadatapro.warningcantbemodifiedineditmode")
     "EmailClass": services.localization.render("metadatapro.fieldtype.email"),
     "StaticListClass/radio": services.localization.render("metadatapro.fieldtype.listradio"),
     "StaticListClass/select": services.localization.render("metadatapro.fieldtype.listselect"),
-    "StaticListClass/checkbox": services.localization.render("metadatapro.fieldtype.listcheckbox")
+    "StaticListClass/checkbox": services.localization.render("metadatapro.fieldtype.listcheckbox"),
+    "PageClass/single": services.localization.render("metadatapro.fieldtype.pagesingle"),
+    "PageClass/multi": services.localization.render("metadatapro.fieldtype.pagemulti")
   ];
 
   @Field final String l10nFieldTechName = services.xml.escape(services.localization.render("metadatapro.set.th.fieldtechnicalname"));
@@ -451,6 +459,8 @@ $services.localization.render("metadatapro.warningcantbemodifiedineditmode")
         def bp = property.getBasePropertyClass();
         type += "/" + bp.getDisplayType();
         values = bp.getList();
+      } else if (type == "PageClass") {
+        type += "/" + (property.getPropertyClass().isMultiSelect() ? "multi" : "single");
       }
 
       if (isManaged(type)) {
@@ -868,7 +878,7 @@ $services.localization.render("metadatapro.warningcantbemodifiedineditmode")
             const valueInputs = advancedTR.getElementsByClassName("metadatapro-list-value");
             const values  = [].map.call(valueInputs, input =&gt; input.value);
 
-            const defaultValues = type.startsWith("StaticListClass/")
+            const defaultValues = (type.startsWith("StaticListClass/") || type === "PageClass/multi")
                 ? [].map.call(
                     advancedTR.querySelectorAll(":checked + .metadatapro-list-value"),
                     input =&gt; input.value
@@ -1100,12 +1110,15 @@ $services.localization.render("metadatapro.warningcantbemodifiedineditmode")
     vertical-align: middle;
   }
 
-  &amp;:has([name='field-type'] &gt; [value^="StaticListClass/"]:checked) + tr  {
-    .metadatapro-list-field {
-      display: block;
-    }
-    .metadatapro-simple-field {
-      display: none;
+  &amp;:has([name='field-type'] &gt; [value^="StaticListClass/"]:checked),
+  &amp;:has([name='field-type'] &gt; [value="PageClass/multi"]:checked) {
+    + tr  {
+      .metadatapro-list-field {
+        display: block;
+      }
+      .metadatapro-simple-field {
+        display: none;
+      }
     }
   }
 
