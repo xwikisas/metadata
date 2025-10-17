@@ -67,6 +67,9 @@ metadatapro.fieldtype.string=Small text
 metadatapro.fieldtype.text=Long text
 metadatapro.fieldtype.date=Date
 metadatapro.fieldtype.email=Email
+metadatapro.fieldtype.listcheckbox=Checkboxes
+metadatapro.fieldtype.listradio=Radio buttons
+metadatapro.fieldtype.listselect=Select
 metadatapro.fieldtype.pagesingle=Page
 metadatapro.fieldtype.pagemulti=Pages
 metadatapro.set.th.fieldtechnicalname=Technical name
@@ -98,9 +101,6 @@ metadatapro.editaction=Edit metadata
 metadatapro.no=No
 metadatapro.yes=Yes
 metadatapro.defaultvalue=Default value:
-metadatapro.fieldtype.listcheckbox=Checkboxes
-metadatapro.fieldtype.listradio=Radio buttons
-metadatapro.fieldtype.listselect=Select
 metadatapro.missingeditrights=You don't have edit rights on this metadata set, you won't be able to save your changes.</content>
   <object>
     <name>MetadataPro.Code.Translations</name>
