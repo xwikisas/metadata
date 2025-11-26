@@ -29,7 +29,7 @@
   </parent>
   <groupId>com.xwiki.metadata</groupId>
   <artifactId>metadata</artifactId>
-  <version>1.0.0-rc-4</version>
+  <version>1.0.0-rc-5-SNAPSHOT</version>
   <name>Metadata Pro - Parent POM</name>
   <packaging>pom</packaging>
   <issueManagement>
@@ -40,7 +40,7 @@
     <connection>scm:git:git://github.com/xwikisas/metadata.git</connection>
     <developerConnection>scm:git:git@github.com:xwikisas/metadata.git</developerConnection>
     <url>https://github.com/xwikisas/metadata/tree/master</url>
-    <tag>metadata-1.0.0-rc-4</tag>
+    <tag>HEAD</tag>
   </scm>
   <developers>
     <developer>
