@@ -23,11 +23,11 @@
 <xwikidoc version="1.6" reference="MetadataPro.Code.MetadataSetTemplate" locale="">
   <web>MetadataPro.Code</web>
   <name>MetadataSetTemplate</name>
-  <parent>WebHome</parent>
   <language/>
   <defaultLanguage/>
   <translation>0</translation>
   <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
   <author>xwiki:XWiki.Admin</author>
   <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
   <version>1.1</version>
@@ -125,9 +125,6 @@
     </class>
     <property>
       <defaultValues/>
-    </property>
-    <property>
-      <enabled/>
     </property>
     <property>
       <includedSpaces/>
