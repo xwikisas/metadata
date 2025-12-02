@@ -1,0 +1,144 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<!--
+ * See the NOTICE file distributed with this work for additional
+ * information regarding copyright ownership.
+ *
+ * This is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+-->
+
+<xwikidoc version="1.6" reference="MetadataPro.Code.Translations" locale="">
+  <web>MetadataPro.Code</web>
+  <name>Translations</name>
+  <language>fr</language>
+  <defaultLanguage>en</defaultLanguage>
+  <translation>1</translation>
+  <creator>xwiki:XWiki.Admin</creator>
+  <parent>WebHome</parent>
+  <author>xwiki:XWiki.Admin</author>
+  <contentAuthor>xwiki:XWiki.Admin</contentAuthor>
+  <version>1.1</version>
+  <title>Translations</title>
+  <comment/>
+  <minorEdit>false</minorEdit>
+  <syntaxId>plain/1.0</syntaxId>
+  <hidden>true</hidden>
+  <content>metadatapro.title=Metadata Pro
+metadatapro.welcome=Bienvenue sur Metadata Pro !
+metadatapro.intro=Ici vous pouvez définir des jeux de métadonnées. Ces jeux contiennent des champs. Vous pourrez ensuite utiliser ces jeux sur des documents. Cela vous permettra de donner des valeurs à ces champs pour chaque document.
+metadatapro.metadatasets=Jeux de métadonnées
+metadatapro.metadatasetlabel=Jeux de métadonnées :
+metadatapro.createset=Créer un jeu de métadonnées
+metadatapro.thisisametadataset=Ceci est un jeu de métadonnées.
+metadatapro.fields=Champs
+metadatapro.displaypagenormally=afficher la page normalement
+metadatapro.warningcantbemodifiedineditmode=Ce jeu de métadonnées ne peut pas être modifié en mode édition. Merci de bien vouloir {0} pour le modifier.
+metadatapro.warningchangingtypescancausedataloss=Changer les types des champs peut occasionner des pertes de données. Utilisez cela avec précautions et testez avant de le faire sur des vraies données.
+metadatapro.locationrestrictions=Restrictions d’emplacement
+metadatapro.technicalnamescantbeempty=Le nom technique d’un champ ne peut pas être vide
+metadatapro.warnmissingrequiredfields=Merci de bien vouloir remplir tous les champs requis
+metadatapro.atleastonefield=Vous devez ajouter au moins un champ
+metadatapro.somethingwentwrongsavingfields=Désolé, quelque chose s’est mal passé lors de l’enregistrement des champs
+metadatapro.importfromconfluence=Importer depuis Metadata for Confluence
+metadatapro.themigrator=le migrateur
+metadatapro.importfromconfluenceexplanation=Vous venez de Metadata for Confluence ? Vous pouvez utilier {0} pour importer vos métadonnées.
+metadatapro.migrationtoolkit=le Confluence Migration Toolkit
+metadatapro.importfromconfluencead=Vous venez de Metadata for Confluence ? Vous pouvez installer {0} pour importer vos métadonnées.
+metadatapro.updatemetadataclasssavemessage=Mise à jour de la classe de métadonnées
+metadatapro.livedata.doc.author=Auteur
+metadatapro.livedata.doc.title=Jeu de métadonnées
+metadatapro.livedata.doc.location=Emplacement
+metadatapro.livedata.doc.creationDate=Créé
+metadatapro.livedata.doc.date=Modifié
+metadatapro.fieldtype.long=Nombre enter
+metadatapro.fieldtype.double=Nombre flottant
+metadatapro.fieldtype.boolean=Booléen
+metadatapro.fieldtype.string=Texte court
+metadatapro.fieldtype.text=Texte long
+metadatapro.fieldtype.date=Date
+metadatapro.fieldtype.email=Courriel
+metadatapro.fieldtype.listcheckbox=Cases à cocher
+metadatapro.fieldtype.listradio=Bouttons radio
+metadatapro.fieldtype.listselect=Champ de sélection
+metadatapro.fieldtype.pagesingle=Page
+metadatapro.fieldtype.pagemulti=Pages
+metadatapro.set.th.fieldtechnicalname=Nom technique
+metadatapro.set.th.fieldname=Nom visible
+metadatapro.set.th.type=Type
+metadatapro.set.th.actions=Actions
+metadatapro.set.th.required=Requis
+metadatapro.actions.newfield=Ajouter un champ
+metadatapro.actions.newvalue=Ajouter une valeur
+metadatapro.actions.add=Ajouter
+metadatapro.actions.edit=Modifier
+metadatapro.actions.save=Enregistrer
+metadatapro.actions.up=Haut
+metadatapro.actions.down=Bas
+metadatapro.actions.remove=Supprimer
+metadatapro.actions.cancel=Annuler les modifications
+metadatapro.requiresjavascript=Cet écran ne fonctionne pas sans Javascript. Merci de bien vouloir l’activer.
+metadatapro.config.includedSpaces.hint=Spécifiez dans quels espaces il sera possible d’ajouter des métadonnées aux documents. Laissez vide pour permettre partout.
+metadatapro.createone=en créer un
+metadatapro.nosetsforthislocation=Aucun jeu de métadonnées n’est disponible à cet endroit. Vous pouvez {0}. N’oubliez pas de permettre l’emplacement de ce document.
+metadatapro.createnewsets=créer de nouveux jeux de métadonnées
+metadatapro.nomoresetsforthislocation=Vous pouvez {0} pour les ajouter à ce document. N’oubliez pas de permettre l’emplacement de ce document.
+metadatapro.youcanaddaset=Vous pouvez associer des métadonnées à ce document. Pour cela, choisissez un jeu de métadonnées ci-après.
+metadatapro.nosuchset=Il n’y a pas de tel jeu
+metadatapro.box.title=Métadonnées
+metadatapro.savetoconfirmdeletion=Pour confirmer la suppression de ce jeu de métadonnées sur cette page, cliquez sur « Enregistrer &amp; Fermer ».
+metadatapro.editaction=Modifier les métadonnées
+metadatapro.no=Non
+metadatapro.yes=Oui
+metadatapro.defaultvalue=Valeur par défaut :
+metadatapro.missingeditrights=Vous n’avez pas les droits de modification sur ce jeu de métadonnées, vous ne pourrez pas enregistrer vos modifications.</content>
+  <object>
+    <name>MetadataPro.Code.Translations</name>
+    <number>0</number>
+    <className>XWiki.TranslationDocumentClass</className>
+    <guid>7d1c4d8e-4672-4b1d-9207-0d034458973f</guid>
+    <class>
+      <name>XWiki.TranslationDocumentClass</name>
+      <customClass/>
+      <customMapping/>
+      <defaultViewSheet/>
+      <defaultEditSheet/>
+      <defaultWeb/>
+      <nameField/>
+      <validationScript/>
+      <scope>
+        <cache>0</cache>
+        <disabled>0</disabled>
+        <displayType>select</displayType>
+        <freeText>forbidden</freeText>
+        <largeStorage>0</largeStorage>
+        <multiSelect>0</multiSelect>
+        <name>scope</name>
+        <number>1</number>
+        <prettyName>Scope</prettyName>
+        <relationalStorage>0</relationalStorage>
+        <separator> </separator>
+        <separators>|, </separators>
+        <size>1</size>
+        <unmodifiable>0</unmodifiable>
+        <values>GLOBAL|WIKI|USER|ON_DEMAND</values>
+        <classType>com.xpn.xwiki.objects.classes.StaticListClass</classType>
+      </scope>
+    </class>
+    <property>
+      <scope>WIKI</scope>
+    </property>
+  </object>
+</xwikidoc>

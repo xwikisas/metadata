@@ -258,7 +258,7 @@
 #elseif ($xcontext.action == "edit" || $request.outputSyntax == 'annotatedhtml' || $request.outputSyntax == 'annotatedxhtml')
 
 {{warning}}
-$services.localization.render("metadatapro.warningcantbemodifiedineditmode")
+$services.localization.render("metadatapro.warningcantbemodifiedineditmode", ["[[$services.localization.render('metadatapro.displaypagenormally')>>&gt;&gt;$doc.fullName]]"])
 {{/warning}}
 
 #else

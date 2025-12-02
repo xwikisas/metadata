@@ -60,9 +60,9 @@
     = $services.localization.render('metadatapro.importfromconfluence') =
 
     #if ($xwiki.exists("ConfluenceMigratorPro.Metadata.WebHome"))
-        $services.localization.render('metadatapro.importfromconfluenceexplanation')
+      $services.localization.render('metadatapro.importfromconfluenceexplanation', ["[[$services.localization.render('metadatapro.themigrator')&gt;&gt;ConfluenceMigratorPro.Metadata.WebHome]]"])
     #else
-        $services.localization.render('metadatapro.importfromconfluencead')
+        $services.localization.render('metadatapro.importfromconfluencead', ["[[$services.localization.render('metadatapro.migrationtoolkit')&gt;&gt;https://store.xwiki.com/xwiki/bin/view/Extension/Confluence%20Migration%20Toolkit/]]"])
     #end
 #end
 {{/velocity}}

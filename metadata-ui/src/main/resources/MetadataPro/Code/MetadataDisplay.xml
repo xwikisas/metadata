@@ -84,7 +84,7 @@
     def boxStarted = false;
     if (res.isEmpty()) {
       if (!quiet) {
-        println services.localization.render("metadatapro.nosetsforthislocation");
+        println services.localization.render("metadatapro.nosetsforthislocation", ["[[$services.localization.render('metadatapro.createone')&gt;&gt;MetadataPro.WebHome]]"]);
       }
     } else {
       def objectsToRender = [];
@@ -129,7 +129,7 @@
           );
           println "{{/html}}";
         } else {
-          println services.localization.render("metadatapro.nomoresetsforthislocation");
+          println services.localization.render("metadatapro.nomoresetsforthislocation", ["[[$services.localization.render('metadatapro.createnewsets')&gt;&gt;MetadataPro.WebHome]]"]);
         }
       }
 
