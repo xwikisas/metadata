@@ -318,18 +318,18 @@
     <property>
       <code>.metadatapro-display {
   border:1px solid;
-  border-radius:var(--border-radius-base);
-  background:var(--panel-bg);
-  color:var(--panel-default-text);
+  border-radius:var(--border-radius-base, 7px);
+  background:var(--panel-bg, #fafafa);
+  color:var(--panel-default-text, #333);
   h2 {
-    border-top-left-radius:var(--border-radius-base);
-    border-top-right-radius:var(--border-radius-base);
+    border-top-left-radius:var(--border-radius-base, 7px);
+    border-top-right-radius:var(--border-radius-base, 7px);
     margin-top:0;
     padding-top:0;
     text-align:right;
     font-size:1em;
-    background:var(--panel-header-bg);
-    color:var(--panel-header-text);
+    background:var(--panel-header-bg, #ECECEC);
+    color:var(--panel-header-text, #4D5860);
     font-weight:bold;
     padding:1ex
   }
@@ -377,18 +377,17 @@
 .btn-metadatapro-linklike {
   background:transparent;
   padding:0 .25ex;
-  color:var(--link-color);
+  color:var(--link-color, #2f6faf);
   border:0;
 }
 
 .btn-metadatapro-linklike-danger {
-  color: var(--brand-danger);
+  color: var(--brand-danger, #CC3333);
 }
 
 .btn-metadatapro-delete {
-  color:var(--brand-danger)
-}
-</code>
+  color:var(--brand-danger, #CC3333);
+}</code>
     </property>
     <property>
       <contentType>CSS</contentType>
