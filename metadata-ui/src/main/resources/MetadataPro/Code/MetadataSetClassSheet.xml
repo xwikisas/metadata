@@ -48,7 +48,6 @@
   import org.apache.commons.io.IOUtils;
 
   import groovy.transform.Field;
-  import net.sf.json.JSONNull;
 
   @Field final JSONTool jsontool = new JSONTool();
   @Field final String l10nUpdateMetadataClass = services.localization.render('metadatapro.updatemetadataclasssavemessage');
@@ -204,9 +203,6 @@
       PropertyInterface property = originalFields.get(technicalName);
 
       def dv = field.get("defaultValues");
-      if (dv instanceof JSONNull) {
-        dv = null;
-      }
 
       if (dv != null &amp;&amp; !((List)dv).isEmpty()) {
         defaultValues.put(technicalName, dv);
