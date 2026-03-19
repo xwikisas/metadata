@@ -169,7 +169,7 @@
       <extensionPointId>org.xwiki.platform.panels.Applications</extensionPointId>
     </property>
     <property>
-      <name>confluence.migratorpro.panel</name>
+      <name>metadata.panel</name>
     </property>
     <property>
       <parameters>label=$services.localization.render('metadatapro.title')
